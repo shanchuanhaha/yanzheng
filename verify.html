@@ -74,18 +74,17 @@
         var msg  = document.getElementById('msg');
         var btn  = document.getElementById('verifyBtn');
         var tg = window.Telegram.WebApp;
-
-        // 采集设备信息
         var ua = navigator.userAgent;
-        var platform = tg.platform || 'unknown';
+
         function getOS() {
             if (/Android/i.test(ua)) return 'Android';
             if (/iPhone|iPad|iPod/i.test(ua)) return 'iOS';
             if (/Windows/i.test(ua)) return 'Windows';
-            if (/Mac/i.test(ua)) return 'macOS';
+            if (/Mac/i.test(ua) && !/iPhone|iPad/i.test(ua)) return 'macOS';
             if (/Linux/i.test(ua)) return 'Linux';
             return '未知';
         }
+
         function getBrowser() {
             if (/Edg/i.test(ua)) return 'Edge';
             if (/Chrome/i.test(ua) && !/Edg/i.test(ua)) return 'Chrome';
@@ -93,7 +92,81 @@
             if (/Firefox/i.test(ua)) return 'Firefox';
             return '未知';
         }
-        var deviceInfo = getOS() + ' | ' + getBrowser() + ' | TG:' + platform;
+
+        function getDeviceModel() {
+            var os = getOS();
+            if (os === 'iOS') {
+                // iPhone 型号只能通过屏幕分辨率粗略推断
+                var w = Math.max(screen.width, screen.height);
+                var h = Math.min(screen.width, screen.height);
+                var ratio = window.devicePixelRatio || 1;
+                var pw = w * ratio, ph = h * ratio;
+                if (pw === 1290 && ph === 2796) return 'iPhone 15 Pro Max / 16 Pro Max';
+                if (pw === 1179 && ph === 2556) return 'iPhone 15 Pro / 16';
+                if (pw === 1284 && ph === 2778) return 'iPhone 14 Pro Max / 13 Pro Max';
+                if (pw === 1170 && ph === 2532) return 'iPhone 14 / 13 / 12';
+                if (pw === 1125 && ph === 2436) return 'iPhone X / XS / 11 Pro';
+                if (pw === 828 && ph === 1792) return 'iPhone XR / 11';
+                if (pw === 1242 && ph === 2688) return 'iPhone XS Max / 11 Pro Max';
+                if (pw === 750 && ph === 1334) return 'iPhone 6/7/8/SE';
+                if (pw === 1080 && ph === 2340) return 'iPhone 14 Plus';
+                if (pw === 1024 && ph === 1366) return 'iPad';
+                return 'iPhone';
+            }
+            if (os === 'Android') {
+                // 尝试从 UA 中提取型号
+                var m = ua.match(/; ([A-Za-z0-9 \-]+) Build/);
+                if (m && m[1] && !/Android|Linux|AppleWebKit|KHTML|Gecko|Mobile|SamsungBrowser|Version|Chrome|Firefox|Edg|OPR/i.test(m[1])) {
+                    return m[1].trim();
+                }
+                // 三星设备
+                m = ua.match(/SM-[A-Za-z0-9]+/);
+                if (m) return m[0];
+                // 华为设备
+                m = ua.match(/[A-Z]{3}-[A-Z]{2,3}[0-9]{1,2}/);
+                if (m) return m[0];
+                // 小米设备
+                m = ua.match(/Mi [0-9A-Za-z ]+/);
+                if (m) return m[0];
+                // OnePlus
+                m = ua.match(/ONEPLUS [A-Za-z0-9]+/);
+                if (m) return m[0];
+                // Pixel
+                m = ua.match(/Pixel [0-9A-Za-z ]+/);
+                if (m) return m[0];
+                return 'Android设备';
+            }
+            if (os === 'Windows') return 'Windows PC';
+            if (os === 'macOS') return 'Mac';
+            return os;
+        }
+
+        function getOSVersion() {
+            var os = getOS();
+            if (os === 'iOS') {
+                var m = ua.match(/OS ([0-9_]+)/);
+                return m ? m[1].replace(/_/g, '.') : '';
+            }
+            if (os === 'Android') {
+                var m = ua.match(/Android ([0-9.]+)/);
+                return m ? m[1] : '';
+            }
+            return '';
+        }
+
+        var osName = getOS();
+        var osVer = getOSVersion();
+        var model = getDeviceModel();
+        var browser = getBrowser();
+        var platform = tg.platform || 'unknown';
+        var screenInfo = screen.width + 'x' + screen.height;
+
+        // 构建设备信息字符串
+        var deviceStr = model;
+        if (osVer) deviceStr += ' | ' + osName + ' ' + osVer;
+        else deviceStr += ' | ' + osName;
+        deviceStr += ' | ' + browser + ' | TG:' + platform;
+        deviceStr += ' | ' + screenInfo;
 
         fetch('https://api.ipify.org?format=json')
             .then(function(r){return r.json()})
@@ -128,10 +201,7 @@
             tg.sendData(JSON.stringify({
                 verified: true,
                 ip: ip,
-                device: deviceInfo,
-                os: getOS(),
-                browser: getBrowser(),
-                platform: platform
+                device: deviceStr
             }));
         }
     </script>
