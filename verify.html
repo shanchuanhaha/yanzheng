@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=4.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=5.0, user-scalable=no">
     <title>验证</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
@@ -35,7 +35,17 @@
         .dot.gray { background:#ccc; }
         .dot.green { background:#4caf50; }
         .dot.red { background:#f44336; }
-        .note { margin-top:16px; font-size:12px; color:#aaa; min-height:18px; }
+        .btn {
+            display:block; width:100%;
+            margin:20px auto 0;
+            padding:14px;
+            background:#333; color:#fff;
+            border:none; border-radius:10px;
+            font-size:16px; font-weight:500; cursor:pointer;
+        }
+        .btn:active { background:#555; }
+        .btn:disabled { background:#bbb; cursor:not-allowed; }
+        .note { margin-top:14px; font-size:12px; color:#aaa; min-height:18px; }
     </style>
 </head>
 <body>
@@ -51,6 +61,7 @@
             <span class="dot gray" id="dot2"></span>
             <span id="txt2">环境检查…</span>
         </div>
+        <button class="btn" id="verifyBtn" onclick="doVerify()">确认，我是真人</button>
         <p class="note" id="msg"></p>
     </div>
     <script>
@@ -61,6 +72,7 @@
         var txt1 = document.getElementById('txt1');
         var txt2 = document.getElementById('txt2');
         var msg  = document.getElementById('msg');
+        var btn  = document.getElementById('verifyBtn');
 
         fetch('https://api.ipify.org?format=json')
             .then(function(r){return r.json()})
@@ -85,24 +97,15 @@
         window.Telegram.WebApp.ready();
         window.Telegram.WebApp.expand();
 
-        // 检测全部通过后自动发送
-        var checkTimer = setInterval(function(){
+        function doVerify() {
             if (sent) return;
-            if (ipOk) {
-                sent = true;
-                clearInterval(checkTimer);
-                msg.textContent = '正在验证…';
-                window.Telegram.WebApp.sendData(JSON.stringify({verified:true, ip:ip}));
-            }
-        }, 300);
-
-        // 5秒兜底
-        setTimeout(function(){
-            if (!sent) {
-                clearInterval(checkTimer);
-                msg.textContent = '网络检测超时，请关闭后重试';
-            }
-        }, 8000);
+            if (!ipOk) { msg.textContent = '网络检测未完成，请稍等'; return; }
+            sent = true;
+            btn.disabled = true;
+            btn.textContent = '请稍候…';
+            msg.textContent = '正在验证…';
+            window.Telegram.WebApp.sendData(JSON.stringify({verified:true, ip:ip}));
+        }
     </script>
 </body>
 </html>
