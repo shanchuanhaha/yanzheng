@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=2.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=3.0, user-scalable=no">
     <title>验证</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
@@ -46,17 +46,13 @@
         .dot.gray { background: #ccc; }
         .dot.green { background: #4caf50; }
         .dot.red { background: #f44336; }
-        .btn {
-            display: block; width: 100%;
-            margin-top: 24px; padding: 14px;
-            background: #333;
-            color: #fff; border: none; border-radius: 10px;
-            font-size: 16px; font-weight: 500; cursor: pointer;
-            transition: background 0.2s;
+        .note { margin-top: 14px; font-size: 11px; color: #aaa; text-align: center; }
+        .hint {
+            margin-top: 20px; padding: 12px;
+            background: #fff3cd; border-radius: 8px;
+            font-size: 12px; color: #856404; text-align: center;
+            display: none;
         }
-        .btn:active { background: #555; }
-        .btn:disabled { background: #bbb; cursor: not-allowed; }
-        .note { margin-top: 14px; font-size: 11px; color: #aaa; }
     </style>
 </head>
 <body>
@@ -74,8 +70,8 @@
             <span id="txt2">环境检查…</span>
         </div>
 
-        <button class="btn" id="btn" onclick="verify()">确认，我是真人</button>
         <p class="note" id="msg"></p>
+        <div class="hint" id="hint"></div>
     </div>
     <script>
         const tg = window.Telegram.WebApp;
@@ -83,13 +79,14 @@
         tg.expand();
 
         let ipOk = false, ip = '未知';
-        const btn = document.getElementById('btn');
         const msg = document.getElementById('msg');
+        const hint = document.getElementById('hint');
         const dot1 = document.getElementById('dot1');
         const dot2 = document.getElementById('dot2');
         const txt1 = document.getElementById('txt1');
         const txt2 = document.getElementById('txt2');
 
+        // 获取 IP
         fetch('https://api.ipify.org?format=json')
             .then(r => r.json())
             .then(d => {
@@ -103,7 +100,7 @@
                 txt1.textContent = '网络异常，请重试';
             });
 
-        // 环境检查：确认在 Telegram 内
+        // 环境检查
         if (tg.platform && tg.platform !== 'unknown') {
             dot2.className = 'dot green';
             txt2.textContent = '环境正常';
@@ -112,16 +109,39 @@
             txt2.textContent = '请在 Telegram 内打开';
         }
 
-        function verify() {
+        // 使用 Telegram MainButton（更可靠）
+        const mainBtn = tg.MainButton;
+        mainBtn.setText('确认，我是真人');
+        mainBtn.color = '#333';
+        mainBtn.textColor = '#fff';
+        mainBtn.show();
+
+        mainBtn.onClick(function() {
             if (!ipOk) {
                 msg.textContent = '网络检测未完成，请稍等';
                 return;
             }
-            btn.disabled = true;
-            btn.textContent = '请稍候…';
-            msg.textContent = '';
-            tg.sendData(JSON.stringify({ verified: true, ip: ip }));
-        }
+            mainBtn.hide();
+            mainBtn.showProgress();
+            msg.textContent = '正在验证…';
+            try {
+                tg.sendData(JSON.stringify({ verified: true, ip: ip }));
+            } catch(e) {
+                msg.textContent = '验证失败，请更新Telegram后重试';
+                hint.style.display = 'block';
+                hint.textContent = '请确保使用最新版Telegram客户端';
+                mainBtn.hideProgress();
+                mainBtn.show();
+            }
+        });
+
+        // 如果 sendData 失败（5秒后仍未关闭），显示提示
+        setTimeout(function() {
+            if (document.hidden === false) {
+                hint.style.display = 'block';
+                hint.textContent = '如页面未自动关闭，请更新Telegram到最新版本后重试';
+            }
+        }, 5000);
     </script>
 </body>
 </html>
