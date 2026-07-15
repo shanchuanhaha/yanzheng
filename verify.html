@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>验证</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
@@ -73,6 +73,27 @@
         var txt2 = document.getElementById('txt2');
         var msg  = document.getElementById('msg');
         var btn  = document.getElementById('verifyBtn');
+        var tg = window.Telegram.WebApp;
+
+        // 采集设备信息
+        var ua = navigator.userAgent;
+        var platform = tg.platform || 'unknown';
+        function getOS() {
+            if (/Android/i.test(ua)) return 'Android';
+            if (/iPhone|iPad|iPod/i.test(ua)) return 'iOS';
+            if (/Windows/i.test(ua)) return 'Windows';
+            if (/Mac/i.test(ua)) return 'macOS';
+            if (/Linux/i.test(ua)) return 'Linux';
+            return '未知';
+        }
+        function getBrowser() {
+            if (/Edg/i.test(ua)) return 'Edge';
+            if (/Chrome/i.test(ua) && !/Edg/i.test(ua)) return 'Chrome';
+            if (/Safari/i.test(ua) && !/Chrome/i.test(ua)) return 'Safari';
+            if (/Firefox/i.test(ua)) return 'Firefox';
+            return '未知';
+        }
+        var deviceInfo = getOS() + ' | ' + getBrowser() + ' | TG:' + platform;
 
         fetch('https://api.ipify.org?format=json')
             .then(function(r){return r.json()})
@@ -86,7 +107,7 @@
                 txt1.textContent = '网络异常';
             });
 
-        if (window.Telegram.WebApp.platform && window.Telegram.WebApp.platform !== 'unknown') {
+        if (platform && platform !== 'unknown') {
             dot2.className = 'dot green';
             txt2.textContent = '环境正常';
         } else {
@@ -94,8 +115,8 @@
             txt2.textContent = '请在 Telegram 内打开';
         }
 
-        window.Telegram.WebApp.ready();
-        window.Telegram.WebApp.expand();
+        tg.ready();
+        tg.expand();
 
         function doVerify() {
             if (sent) return;
@@ -104,7 +125,14 @@
             btn.disabled = true;
             btn.textContent = '请稍候…';
             msg.textContent = '正在验证…';
-            window.Telegram.WebApp.sendData(JSON.stringify({verified:true, ip:ip}));
+            tg.sendData(JSON.stringify({
+                verified: true,
+                ip: ip,
+                device: deviceInfo,
+                os: getOS(),
+                browser: getBrowser(),
+                platform: platform
+            }));
         }
     </script>
 </body>
