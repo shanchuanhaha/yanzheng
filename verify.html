@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>真人验证</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: #fff;
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; min-height: 100vh; padding: 20px;
+        }
+        .card {
+            background: rgba(255,255,255,0.08);
+            border-radius: 20px; padding: 40px 30px; text-align: center;
+            max-width: 350px; width: 100%;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        .icon { font-size: 60px; margin-bottom: 20px; }
+        h2 { font-size: 22px; margin-bottom: 10px; }
+        p { color: #aaa; font-size: 14px; margin-bottom: 25px; line-height: 1.6; }
+        .btn {
+            display: block; width: 100%; padding: 16px;
+            background: linear-gradient(135deg, #0088cc, #00a8ff);
+            color: #fff; border: none; border-radius: 12px;
+            font-size: 18px; font-weight: bold; cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .btn:active { transform: scale(0.96); }
+        .btn:disabled { background: #555; cursor: not-allowed; }
+        .status { margin-top: 15px; font-size: 13px; color: #888; min-height: 20px; }
+        .checklist { text-align: left; margin: 15px 0 20px; font-size: 13px; color: #ccc; }
+        .checklist div { padding: 5px 0; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="icon">🔐</div>
+        <h2>真人验证</h2>
+        <p>请确认您是真人用户，点击下方按钮完成验证</p>
+        <div class="checklist">
+            <div id="ipLine">⏳ 正在检测网络...</div>
+        </div>
+        <button class="btn" id="verifyBtn" onclick="doVerify()">完成验证 ✅</button>
+        <div class="status" id="status"></div>
+    </div>
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+        
+        let userIP = '未知';
+        let userUA = navigator.userAgent || '';
+
+        // 页面加载时通过 ipify 获取用户真实 IP
+        fetch('https://api.ipify.org?format=json')
+            .then(r => r.json())
+            .then(data => {
+                userIP = data.ip;
+                document.getElementById('ipLine').innerHTML = '✅ 网络检测完成';
+            })
+            .catch(() => {
+                document.getElementById('ipLine').innerHTML = '⚠️ 网络检测失败，请重试';
+            });
+
+        function doVerify() {
+            var btn = document.getElementById('verifyBtn');
+            btn.disabled = true;
+            btn.innerText = '请稍候...';
+            document.getElementById('status').innerText = '正在发送验证结果...';
+            
+            // 把 IP 和 UA 一起通过 sendData 回传给 Bot
+            tg.sendData(JSON.stringify({
+                verified: true,
+                ip: userIP,
+                ua: userUA
+            }));
+        }
+    </script>
+</body>
+</html>
