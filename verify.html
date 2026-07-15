@@ -2,57 +2,40 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=3.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>验证</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background: #f5f5f5;
-            color: #222;
+            background: #f5f5f5; color: #222;
             display: flex; flex-direction: column;
             align-items: center; justify-content: center;
             min-height: 100vh; padding: 24px;
         }
         .card {
-            background: #fff;
-            border-radius: 16px;
-            padding: 36px 28px 28px;
-            text-align: center;
-            max-width: 340px;
-            width: 100%;
+            background: #fff; border-radius: 16px; padding: 36px 28px 28px;
+            text-align: center; max-width: 340px; width: 100%;
             box-shadow: 0 1px 3px rgba(0,0,0,0.08);
         }
         .shield {
-            width: 64px; height: 64px;
-            margin: 0 auto 20px;
-            background: #e8f4e8;
-            border-radius: 50%;
-            display: flex;
-            align-items: center; justify-content: center;
-            font-size: 32px;
+            width: 64px; height: 64px; margin: 0 auto 20px;
+            background: #e8f4e8; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center; font-size: 32px;
         }
         h2 { font-size: 20px; font-weight: 600; margin-bottom: 6px; }
-        .sub { color: #888; font-size: 13px; margin-bottom: 24px; line-height: 1.5; }
+        .sub { color: #888; font-size: 13px; margin-bottom: 20px; }
         .row {
             display: flex; align-items: center;
-            padding: 10px 0;
-            border-bottom: 1px solid #f0f0f0;
+            padding: 10px 0; border-bottom: 1px solid #f0f0f0;
             font-size: 13px; color: #555;
         }
-        .row:last-child { border-bottom: none; }
         .dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 10px; flex-shrink: 0; }
         .dot.gray { background: #ccc; }
         .dot.green { background: #4caf50; }
         .dot.red { background: #f44336; }
-        .note { margin-top: 14px; font-size: 11px; color: #aaa; text-align: center; }
-        .hint {
-            margin-top: 20px; padding: 12px;
-            background: #fff3cd; border-radius: 8px;
-            font-size: 12px; color: #856404; text-align: center;
-            display: none;
-        }
+        .note { margin-top: 16px; font-size: 12px; color: #aaa; text-align: center; min-height: 18px; }
     </style>
 </head>
 <body>
@@ -60,7 +43,6 @@
         <div class="shield">🛡️</div>
         <h2>身份验证</h2>
         <p class="sub">请确认您是真人用户</p>
-
         <div class="row">
             <span class="dot gray" id="dot1"></span>
             <span id="txt1">检测连接…</span>
@@ -69,35 +51,32 @@
             <span class="dot gray" id="dot2"></span>
             <span id="txt2">环境检查…</span>
         </div>
-
         <p class="note" id="msg"></p>
-        <div class="hint" id="hint"></div>
     </div>
     <script>
-        const tg = window.Telegram.WebApp;
+        var tg = window.Telegram.WebApp;
         tg.ready();
         tg.expand();
 
-        let ipOk = false, ip = '未知';
-        const msg = document.getElementById('msg');
-        const hint = document.getElementById('hint');
-        const dot1 = document.getElementById('dot1');
-        const dot2 = document.getElementById('dot2');
-        const txt1 = document.getElementById('txt1');
-        const txt2 = document.getElementById('txt2');
+        var ipOk = false, ip = '未知';
+        var msg = document.getElementById('msg');
+        var dot1 = document.getElementById('dot1');
+        var dot2 = document.getElementById('dot2');
+        var txt1 = document.getElementById('txt1');
+        var txt2 = document.getElementById('txt2');
+        var sent = false;
 
         // 获取 IP
         fetch('https://api.ipify.org?format=json')
-            .then(r => r.json())
-            .then(d => {
-                ip = d.ip;
-                ipOk = true;
+            .then(function(r) { return r.json(); })
+            .then(function(d) {
+                ip = d.ip; ipOk = true;
                 dot1.className = 'dot green';
                 txt1.textContent = '连接正常';
             })
-            .catch(() => {
+            .catch(function() {
                 dot1.className = 'dot red';
-                txt1.textContent = '网络异常，请重试';
+                txt1.textContent = '网络异常';
             });
 
         // 环境检查
@@ -109,39 +88,24 @@
             txt2.textContent = '请在 Telegram 内打开';
         }
 
-        // 使用 Telegram MainButton（更可靠）
-        const mainBtn = tg.MainButton;
-        mainBtn.setText('确认，我是真人');
-        mainBtn.color = '#333';
-        mainBtn.textColor = '#fff';
-        mainBtn.show();
+        // 使用 MainButton，onClick 中直接 sendData（不调 showProgress）
+        var btn = tg.MainButton;
+        btn.setText('确认，我是真人');
+        btn.color = '#333';
+        btn.textColor = '#fff';
+        btn.show();
 
-        mainBtn.onClick(function() {
+        btn.onClick(function() {
+            if (sent) return;
             if (!ipOk) {
                 msg.textContent = '网络检测未完成，请稍等';
                 return;
             }
-            mainBtn.hide();
-            mainBtn.showProgress();
+            sent = true;
+            btn.hide();
             msg.textContent = '正在验证…';
-            try {
-                tg.sendData(JSON.stringify({ verified: true, ip: ip }));
-            } catch(e) {
-                msg.textContent = '验证失败，请更新Telegram后重试';
-                hint.style.display = 'block';
-                hint.textContent = '请确保使用最新版Telegram客户端';
-                mainBtn.hideProgress();
-                mainBtn.show();
-            }
+            tg.sendData(JSON.stringify({ verified: true, ip: ip }));
         });
-
-        // 如果 sendData 失败（5秒后仍未关闭），显示提示
-        setTimeout(function() {
-            if (document.hidden === false) {
-                hint.style.display = 'block';
-                hint.textContent = '如页面未自动关闭，请更新Telegram到最新版本后重试';
-            }
-        }, 5000);
     </script>
 </body>
 </html>
